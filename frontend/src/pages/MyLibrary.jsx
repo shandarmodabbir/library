@@ -39,8 +39,6 @@ export default function MyLibrary() {
         {data.loans.filter(l => l.due_soon || l.overdue).map(l => <p key={l.book.id}><Link to={`/book/${l.book.id}`}>{l.book.name}</Link> — {l.overdue ? 'overdue' : 'due within 3 days'}.</p>)}
         {data.reservations.filter(r => r.ready_until).map(r => <p key={r.book.id}><Link to={`/book/${r.book.id}`}>{r.book.name}</Link> is ready to borrow until {new Date(r.ready_until).toLocaleString()}.</p>)}
       </div>}
-      <label className="reminder-preference"><input type="checkbox" checked={data.email_reminders} disabled={busy || (!data.email_configured && !data.email_reminders)} onChange={e => perform(() => api.reminders(e.target.checked))} /> Email me return reminders</label>
-      {!data.email_configured && <p>Email reminders are available after the library configures email delivery. Due-date reminders appear here automatically.</p>}
       <section className="library-section"><h3>Current loans</h3>
         {!data.loans.length ? <p>No active loans. <Link to="/">Browse the catalog</Link>.</p> : <div className="book-grid">{data.loans.map(loan => <div key={loan.book.id}>
           <p className={loan.overdue ? 'overdue' : ''}>{loan.overdue ? 'Overdue' : 'Due'}: {new Date(loan.due_date).toLocaleDateString()}</p>

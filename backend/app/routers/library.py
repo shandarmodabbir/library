@@ -6,7 +6,6 @@ from sqlalchemy.orm import Session
 from .. import models, schemas, oauth2
 from ..database import get_db
 from ..services.circulation import return_loan, lock_book, queue, utc
-from ..config import settings
 
 router = APIRouter(prefix="/library", tags=["My library"])
 
@@ -26,8 +25,7 @@ def mine(db: Session = Depends(get_db), user=Depends(oauth2.get_current_user)):
     reading = db.query(models.ReadingStatus, models.Book).join(models.Book, models.Book.id == models.ReadingStatus.book_id).filter(models.ReadingStatus.user_id == user.id).all()
     reservations = db.query(models.Reservation, models.Book).join(models.Book, models.Book.id == models.Reservation.book_id).filter(models.Reservation.user_id == user.id).all()
     history = db.query(models.LoanHistory).filter_by(user_id=user.id).order_by(models.LoanHistory.returned_at.desc()).all()
-    return {'email_reminders': user.email_reminders, 'email_configured': bool(settings.smtp_host and settings.smtp_from),
-            'reservations': [{'book': schemas.BookOut.model_validate(book), 'position': next(i+1 for i,r in enumerate(queue(db,book.id)) if r.user_id == user.id), 'ready_until': utc(r.ready_until) if r.ready_until else None} for r,book in reservations],
+    return {'reservations': [{'book': schemas.BookOut.model_validate(book), 'position': next(i+1 for i,r in enumerate(queue(db,book.id)) if r.user_id == user.id), 'ready_until': utc(r.ready_until) if r.ready_until else None} for r,book in reservations],
             'history': [{'id': h.id, 'book_id': h.book_id, 'name': h.book_name, 'author': h.book_author, 'borrowed_at': utc(h.borrowed_at), 'due_date': utc(h.due_date), 'returned_at': utc(h.returned_at), 'renewals': h.renewals} for h in history],
             'contributions': [schemas.BookOut.model_validate(b) for b in db.query(models.Book).filter(models.Book.provider_user_id == user.id).all()],
             'loans': [loan_out(loan, book) for loan, book in loans],
@@ -66,15 +64,3 @@ def return_book(book_id: int, db: Session = Depends(get_db), user=Depends(librar
         return_loan(db, loan, book)
     db.commit()
     return {'message': 'Book returned'}
-
-
-class ReminderPreference(BaseModel):
-    enabled: bool
-
-@router.put('/reminders')
-def reminders(body: ReminderPreference, db: Session = Depends(get_db), user=Depends(oauth2.get_current_user)):
-    if body.enabled and not (settings.smtp_host and settings.smtp_from):
-        raise HTTPException(503, 'Email delivery is not configured yet')
-    user.email_reminders = body.enabled
-    db.commit()
-    return {'enabled': user.email_reminders}

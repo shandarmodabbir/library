@@ -67,7 +67,6 @@ export const api = {
   renew: (id) => request(`/borrow/${id}/renew`, { method: 'POST', auth: true }),
   reserve: (id) => request(`/borrow/${id}/reserve`, { method: 'POST', auth: true }),
   cancelReservation: (id) => request(`/borrow/${id}/reserve`, { method: 'DELETE', auth: true }),
-  reminders: (enabled) => request('/library/reminders', { method: 'PUT', body: { enabled }, auth: true }),
 
   getBook: (id) => request(`/books/${id}`),
 

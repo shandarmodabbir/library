@@ -80,7 +80,6 @@ input, select, textarea { min-width: 0; max-width: 100%; }
 .library-section > p { color: var(--ink-soft); } .library-section .book-grid { grid-template-columns: repeat(auto-fill,minmax(230px,1fr)); }
 .management-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; border-bottom: 1px solid var(--line-soft); padding: 16px 0; font-size: 14px; overflow-wrap: anywhere; } .management-row:last-child { border-bottom: 0; }
 .overdue { color: var(--stamp-red); } .reminder-banner { background: #efeddf; padding: 18px 22px; border-left: 3px solid var(--brass); border-radius: 4px 10px 10px 4px; margin: 18px 0; font-size: 14px; } .reminder-banner p:last-child { margin: 0; }
-.reminder-preference { display: flex; align-items: center; gap: 8px; font: 13px var(--font-ui); margin-top: 20px; } input[type=checkbox] { accent-color: var(--green); }
 .reservation-box { background: #edf0e8; padding: 18px; border-radius: 10px; margin: 18px 0; } .reservation-box button { margin: 4px; }
 .librarian-page .page-heading { margin-bottom: 24px; } .librarian-page h2 { font-size: 36px; }
 .librarian-layout { display: grid; grid-template-columns: 250px minmax(0,1fr); gap: 24px; }

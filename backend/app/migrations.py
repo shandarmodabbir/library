@@ -13,7 +13,7 @@ def upgrade():
     Base.metadata.create_all(bind=engine)
     additions = {
         'borrow': {'renewals': 'INTEGER NOT NULL DEFAULT 0'},
-        'users': {'email_reminders': 'BOOLEAN NOT NULL DEFAULT FALSE', 'role': "VARCHAR NOT NULL DEFAULT 'reader'"},
+        'users': {'role': "VARCHAR NOT NULL DEFAULT 'reader'"},
         'books': {'title_id': 'INTEGER REFERENCES book_titles(id)', 'description': "TEXT NOT NULL DEFAULT ''", 'isbn': "VARCHAR NOT NULL DEFAULT ''",
                   'publication_year': 'INTEGER', 'cover_url': "VARCHAR NOT NULL DEFAULT ''"},
     }

@@ -1,5 +1,5 @@
 from datetime import datetime, timedelta, timezone
-from sqlalchemy import Column, Integer, String, Boolean, ForeignKey, Text, UniqueConstraint
+from sqlalchemy import Column, Integer, String, ForeignKey, Text, UniqueConstraint
 from sqlalchemy.sql.sqltypes import TIMESTAMP
 from sqlalchemy.sql.expression import text
 from sqlalchemy.orm import relationship
@@ -13,7 +13,6 @@ class User(Base):
     password = Column(String, nullable=False)
     created_at = Column(TIMESTAMP(timezone=True), nullable=False, server_default=text("CURRENT_TIMESTAMP"))
     phone_number = Column(String)
-    email_reminders = Column(Boolean, nullable=False, server_default="0")
     role = Column(String, nullable=False, server_default="reader")
 
 class Book(Base):
@@ -97,8 +96,3 @@ class AgentAction(Base):
     request_id = Column(String, primary_key=True)
     action_key = Column(String, primary_key=True)
     result = Column(Text, nullable=False)
-
-class ReminderDelivery(Base):
-    __tablename__ = "reminder_deliveries"
-    key = Column(String, primary_key=True)
-    sent_at = Column(TIMESTAMP(timezone=True), nullable=False, default=lambda: datetime.now(timezone.utc))

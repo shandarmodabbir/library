@@ -20,7 +20,7 @@ The setup script installs locked dependencies, builds the frontend, creates miss
 
 `backend/.env` contains secrets and provider settings; `.env.local` overrides it with the local SQLite URL. Environment variables take precedence over both files. Neither file should be committed.
 
-To use PostgreSQL, set `DATABASE_URL` to a `postgresql+psycopg://...` URL in `.env.local`, or remove `DATABASE_URL` from both `.env.local` and `.env` (and unset it in your shell) to use the `DATABASE_HOSTNAME`, `DATABASE_PORT`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, and `DATABASE_NAME` settings. The supplied `.env.example` includes a SQLite `DATABASE_URL`, which takes precedence over those individual settings. Existing PostgreSQL data is not copied into SQLite. Startup runs an idempotent additive upgrade for the original schema, preserving existing records. It refuses to apply the single-copy constraint if duplicate active loans exist; return those duplicates first. Back up the database before upgrading. Alembic is not currently used by the launcher.
+The application uses SQLite for both library data and AI chat history. No separate database server is required. `DATABASE_URL` defaults to `sqlite:///./library.db`; relative database paths resolve from `backend/`, regardless of the working directory. To use another SQLite file, set an absolute `sqlite:////...` URL in `backend/.env.local`. Other database engines are rejected. Startup runs an idempotent additive upgrade for the original schema, preserving existing records. It refuses to apply the single-copy constraint if duplicate active loans exist; return those duplicates first. Back up the database before upgrading. Alembic is not currently used by the launcher.
 
 The AI librarian requires a valid `GROQ_API_KEY` in `backend/.env` and network access. Use New chat in the librarian sidebar to start a separate conversation, or select a previous conversation to read and continue it. History persists across reloads and is scoped by authenticated user. Older sessions appear only when they have a matching stored user ID. Core library features work without an AI key. AI sessions are stored separately in `backend/agent_sessions.db`.
 
@@ -63,9 +63,9 @@ The catalog groups editions by normalized ISBN, or by normalized title/author wh
 
 ## Reminders and scheduled backups
 
-My Library shows overdue and next-three-day reminders automatically. Optional email reminders require `SMTP_HOST`, `SMTP_FROM`, and the remaining SMTP settings shown in `.env.example`. Each reader must opt in through My Library. Delivery is attempted at most once per loan/due-date/day; uncertain SMTP failures are logged and not automatically resent that day to avoid duplicate mail. No live email delivery was performed during setup.
+My Library shows overdue and next-three-day reminders in the app automatically. Email notifications are not included.
 
-Maintenance is enabled by default (`MAINTENANCE_ENABLED=true`). The single-worker launcher starts a background loop for reservation expiry, optional email reminders, and, when using SQLite, verified backups on startup and after each UTC date change while the app runs. Restarting the app can create another backup on the same day. Setting `MAINTENANCE_ENABLED=false` disables this loop, including automatic email reminders and backups. PostgreSQL requires separate backup tooling. Backups live in `backend/backups/` and are retained until you remove them. To back up manually:
+Maintenance is enabled by default (`MAINTENANCE_ENABLED=true`). The single-worker launcher starts a background loop for reservation expiry and verified SQLite backups on startup and after each UTC date change while the app runs. Restarting the app can create another backup on the same day. Setting `MAINTENANCE_ENABLED=false` disables this loop, including reservation expiry checks and automatic backups. Backups live in `backend/backups/` and are retained until you remove them. To back up manually:
 
 ```sh
 backend/.venv/bin/python scripts/backup_db.py

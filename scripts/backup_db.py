@@ -9,6 +9,4 @@ from app.services.backups import backup
 parser = argparse.ArgumentParser()
 parser.add_argument('--destination', default=settings.backup_dir)
 args = parser.parse_args()
-if engine.dialect.name != 'sqlite':
-    parser.error('This command is for SQLite; use PostgreSQL backup tooling for PostgreSQL')
 print(backup({'library.db': engine.url.database, 'agent_sessions.db': BACKEND_DIR / 'agent_sessions.db'}, args.destination))

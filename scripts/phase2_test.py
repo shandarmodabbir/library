@@ -14,7 +14,6 @@ with tempfile.TemporaryDirectory() as tmp:
     from app.main import app
     from app.database import SessionLocal, engine
     from app import models
-    from app.config import settings
     from app.services.maintenance import maintenance_tick
     from app.services.backups import backup, verify
     from app.routers import isbn
@@ -64,13 +63,6 @@ with tempfile.TemporaryDirectory() as tmp:
             db.query(models.Borrow).filter_by(book_id=book).one().due_date = datetime.now(timezone.utc)+timedelta(days=1)
             db.commit()
         assert c.get('/library/mine',headers=cc).json()['loans'][0]['due_soon']
-        assert c.put('/library/reminders',headers=cc,json={'enabled':True}).status_code == 503
-        with patch.object(settings,'smtp_host','test.example'), patch.object(settings,'smtp_from','library@example.com'), patch('app.services.maintenance.smtplib.SMTP') as smtp:
-            assert c.put('/library/reminders',headers=cc,json={'enabled':True}).status_code == 200
-            maintenance_tick(send_email=True); maintenance_tick(send_email=True)
-            assert smtp.return_value.__enter__.return_value.send_message.call_count == 1
-            sent = smtp.return_value.__enter__.return_value.send_message.call_args.args[0]
-            assert sent['To'] == 'c@example.com'
         response = MagicMock()
         response.json.return_value = {'ISBN:9780441172719':{'title':'Dune','authors':[{'name':'Frank Herbert'}],'publish_date':'1965','cover':{'medium':'https://covers.openlibrary.org/test.jpg'}}}
         with patch.object(isbn.httpx,'get',return_value=response):
@@ -99,4 +91,4 @@ with tempfile.TemporaryDirectory() as tmp:
     except ValueError:
         pass
     engine.dispose()
-print('PASS: copies, pagination, renewals, FIFO reservations, expiry, claim, history preservation, reminder opt-in/deduplication, ISBN, verified backup/restore')
+print('PASS: copies, pagination, renewals, FIFO reservations, expiry, claim, history preservation, in-app due-date reminders, ISBN, verified backup/restore')
