@@ -4,7 +4,7 @@ React frontend and FastAPI backend for a personal library catalog, with accounts
 
 ## Local setup
 
-Requires Node.js 22.12+ and uv. Python 3.12 is provisioned by uv.
+Requires Node.js 22.12+ and uv, plus a Bash-compatible shell for the scripts below. Python 3.12 is provisioned by uv. Run these commands from the repository root.
 
 ```sh
 ./scripts/setup.sh
@@ -20,7 +20,7 @@ The setup script installs locked dependencies, builds the frontend, creates miss
 
 `backend/.env` contains secrets and provider settings; `.env.local` overrides it with the local SQLite URL. Environment variables take precedence over both files. Neither file should be committed.
 
-To use PostgreSQL, set `DATABASE_URL` to a `postgresql+psycopg://...` URL in `.env.local`, or remove its SQLite override to use the existing `DATABASE_*` settings in `.env`. Existing PostgreSQL data is not copied into SQLite. Startup runs an idempotent additive upgrade for the original schema, preserving existing records. It refuses to apply the single-copy constraint if duplicate active loans exist; return those duplicates first. Back up the database before upgrading. Alembic is not currently used by the launcher.
+To use PostgreSQL, set `DATABASE_URL` to a `postgresql+psycopg://...` URL in `.env.local`, or remove `DATABASE_URL` from both `.env.local` and `.env` (and unset it in your shell) to use the `DATABASE_HOSTNAME`, `DATABASE_PORT`, `DATABASE_USERNAME`, `DATABASE_PASSWORD`, and `DATABASE_NAME` settings. The supplied `.env.example` includes a SQLite `DATABASE_URL`, which takes precedence over those individual settings. Existing PostgreSQL data is not copied into SQLite. Startup runs an idempotent additive upgrade for the original schema, preserving existing records. It refuses to apply the single-copy constraint if duplicate active loans exist; return those duplicates first. Back up the database before upgrading. Alembic is not currently used by the launcher.
 
 The AI librarian requires a valid `GROQ_API_KEY` in `backend/.env` and network access. Use New chat in the librarian sidebar to start a separate conversation, or select a previous conversation to read and continue it. History persists across reloads and is scoped by authenticated user. Older sessions appear only when they have a matching stored user ID. Core library features work without an AI key. AI sessions are stored separately in `backend/agent_sessions.db`.
 
@@ -41,7 +41,7 @@ The smoke test uses a disposable database and checks registration, duplicate-ema
 
 ## Library features and permissions
 
-Each catalog entry represents one physical copy. Loans last 14 days; a database uniqueness constraint prevents two readers borrowing the same copy. Books on loan must be returned before deletion. My Library shows contributions, loans, overdue flags, and private reading shelves. Book detail pages support descriptions, ISBNs, publication years, cover-image URLs, and editing.
+Each stored book record represents one physical copy; the catalog groups copies into title cards. Loans last 14 days; a database uniqueness constraint prevents two readers borrowing the same copy. Books on loan must be returned, and all reservations for the copy must be cancelled, before deletion. My Library shows contributions, loans, overdue flags, and private reading shelves. Book detail pages support descriptions, ISBNs, publication years, cover-image URLs, and editing.
 
 New accounts are readers: they can contribute and edit their own books, borrow available books, return their own loans, and manage their reading shelves. Librarians can edit all books, view members and active loans, and record returns. To grant librarian access to an existing account:
 
@@ -51,21 +51,21 @@ backend/.venv/bin/python scripts/set_role.py reader@example.com librarian
 
 Use `reader` instead of `librarian` to revoke the role. Reload the app after changing roles. Role assignment is available only through this local administrator command.
 
-Chat history supports title search, rename, deletion, and retrying a failed message. The AI can look up the signed-in reader's loans and link to book details. Borrow, return, and delete actions require confirmation through the book page; the AI has no tools that bypass those confirmations. Provider calls are not included in automated tests.
+Chat history supports title search, rename, deletion, and retrying a failed message. The AI can look up the signed-in reader's loans and link to book details. Borrow, return, and delete actions require confirmation in the web interface. Book cards expose these actions where permitted, including in the catalog, book detail, and My Library views; librarians can also record returns in My Library. The AI can link to a book but cannot borrow, return, or delete it. Provider calls are not included in automated tests.
 
 ## Reservations, history, and renewals
 
 Loan history now preserves returned loans, including title/author snapshots if a copy is later removed. Returns made before this upgrade cannot be reconstructed. Renewals extend the due date by 14 days, at most twice, and are refused when overdue or when another reader is waiting.
 
-Reservations are per physical copy and ordered by when readers join. A returned copy is held for the next reader for 48 hours. My Library shows queue position and pickup readiness; open the copy to claim it. Cancelling or expiry advances the queue. Maintenance checks expiry every minute while the app runs. There is no promised availability date while a prior borrower still has the copy.
+Reservations are per physical copy and ordered by when readers join. A returned copy is held for the next reader for 48 hours. My Library shows queue position and pickup readiness; open the copy to claim it. Cancelling or expiry advances the queue. With maintenance enabled, the background loop checks expiry approximately every minute while the app runs; circulation actions also advance the queue when applicable. There is no promised availability date while a prior borrower still has the copy.
 
-The catalog groups editions by normalized ISBN, or by normalized title/author when ISBN is absent. Each copy keeps its accession ID, provider, and circulation records. Sorting, availability filters, and pagination work at title level; open the detail page to choose a copy. ISBN lookup uses the [Open Library Books API](https://openlibrary.org/dev/docs/api/books), supports ISBN-10/13, and fills reviewable fields without saving. Keyboard-style barcode readers can type into the ISBN field; camera scanning is not included.
+The catalog groups editions by normalized ISBN, or by normalized title/author when ISBN is absent. Each copy keeps its accession ID, provider, and circulation records. Sorting and pagination work at title level. Availability filters select titles with at least one matching copy: a title with both available and unavailable copies appears under either filter. Reserved copies count as unavailable. Open the detail page to choose a copy. ISBN lookup uses the [Open Library Books API](https://openlibrary.org/dev/docs/api/books), supports ISBN-10/13, and fills reviewable fields without saving. Keyboard-style barcode readers can type into the ISBN field; camera scanning is not included.
 
 ## Reminders and scheduled backups
 
 My Library shows overdue and next-three-day reminders automatically. Optional email reminders require `SMTP_HOST`, `SMTP_FROM`, and the remaining SMTP settings shown in `.env.example`. Each reader must opt in through My Library. Delivery is attempted at most once per loan/due-date/day; uncertain SMTP failures are logged and not automatically resent that day to avoid duplicate mail. No live email delivery was performed during setup.
 
-The single-worker launcher starts maintenance automatically: reservation expiry every minute and verified SQLite backups at startup and once per UTC day while the app runs. Backups live in `backend/backups/` and are retained until you remove them. To back up manually:
+Maintenance is enabled by default (`MAINTENANCE_ENABLED=true`). The single-worker launcher starts a background loop for reservation expiry, optional email reminders, and, when using SQLite, verified backups on startup and after each UTC date change while the app runs. Restarting the app can create another backup on the same day. Setting `MAINTENANCE_ENABLED=false` disables this loop, including automatic email reminders and backups. PostgreSQL requires separate backup tooling. Backups live in `backend/backups/` and are retained until you remove them. To back up manually:
 
 ```sh
 backend/.venv/bin/python scripts/backup_db.py
@@ -83,7 +83,7 @@ Inspect the recovered files, stop the app, then copy the recovered `library.db` 
 
 ## AI retry behavior
 
-Each chat submission carries a request ID. Replays return the saved response; overlapping requests with the same ID are rejected. Book creation is recorded atomically with its result, so a provider failure after creation does not duplicate that book on retry. Confirmed actions are displayed separately from the AI reply. In this flow, adding the same title/author twice within one message is treated as one action; use separate messages to add additional copies. The single-worker launcher makes interrupted requests retryable after restart. Do not run multiple backend workers without replacing this startup recovery rule and coordinating maintenance.
+Each chat submission carries a request ID. Replays return the saved response; overlapping requests with the same ID are rejected. Book creation is recorded atomically with its result, so a provider failure after creation does not duplicate that book on retry. Completed book-creation actions are displayed separately from the AI reply; adding a book through the assistant does not require a separate confirmation. In this flow, adding the same title/author twice within one message is treated as one action; use separate messages to add additional copies. The single-worker launcher makes interrupted requests retryable after restart. Do not run multiple backend workers without replacing this startup recovery rule and coordinating maintenance.
 
 Additional checks:
 
