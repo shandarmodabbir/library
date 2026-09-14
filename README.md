@@ -11,9 +11,8 @@ Requires Node.js 22.12+ and uv. Python 3.12 is provisioned by uv.
 ./scripts/dev.sh
 ```
 
-Open http://127.0.0.1:5174. API documentation: http://127.0.0.1:8001/docs.
+Open http://127.0.0.1:5173. API documentation: http://127.0.0.1:8000/docs.
 Register an account, then add books to populate the empty catalog. Stop both servers with Ctrl+C.
-Ports 8001 and 5174 avoid another local project's existing services.
 
 The setup script installs locked dependencies, builds the frontend, creates missing environment files, and preserves existing configuration. Local library data is stored in `backend/library.db`. Tables are created on backend startup.
 
@@ -25,7 +24,7 @@ To use PostgreSQL, set `DATABASE_URL` to a `postgresql+psycopg://...` URL in `.e
 
 The AI librarian requires a valid `GROQ_API_KEY` in `backend/.env` and network access. Use New chat in the librarian sidebar to start a separate conversation, or select a previous conversation to read and continue it. History persists across reloads and is scoped by authenticated user. Older sessions appear only when they have a matching stored user ID. Core library features work without an AI key. AI sessions are stored separately in `backend/agent_sessions.db`.
 
-The Vite development server proxies API routes to port 8001. For a separately hosted production frontend, set `VITE_API_URL` at build time and configure the backend's allowed origins in `backend/app/main.py`. The local scripts are development launchers, not a production deployment.
+The Vite development server proxies API routes to port 8000. For a separately hosted production frontend, set `VITE_API_URL` at build time and configure the backend's allowed origins in `backend/app/main.py`. The local scripts are development launchers, not a production deployment.
 
 ## Verification
 

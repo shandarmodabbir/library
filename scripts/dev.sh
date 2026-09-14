@@ -5,7 +5,7 @@ pids=()
 cleanup() { for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done; }
 trap cleanup EXIT
 trap 'exit 130' INT TERM
-backend/.venv/bin/python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8001 &
+backend/.venv/bin/python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 &
 pids+=("$!")
 npm --prefix frontend run dev -- --host 127.0.0.1 &
 pids+=("$!")
